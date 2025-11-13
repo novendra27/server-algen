@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Debugger - GA KKM</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .input-group {
+            margin: 20px 0;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .disconnect-btn {
+            background-color: #f44336;
+        }
+        .disconnect-btn:hover {
+            background-color: #da190b;
+        }
+        #status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .status-disconnected {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 2px solid #ef5350;
+        }
+        .status-connecting {
+            background-color: #fff3e0;
+            color: #ef6c00;
+            border: 2px solid #ff9800;
+        }
+        .status-connected {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 2px solid #4caf50;
+        }
+        #messages {
+            background-color: #263238;
+            color: #aed581;
+            padding: 20px;
+            border-radius: 5px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-left: 3px solid #4CAF50;
+            background-color: rgba(255,255,255,0.05);
+        }
+        .message-time {
+            color: #78909c;
+            font-size: 12px;
+        }
+        .message-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status-queued { background-color: #2196F3; color: white; }
+        .status-processing { background-color: #FF9800; color: white; }
+        .status-completed { background-color: #4CAF50; color: white; }
+        .status-failed { background-color: #F44336; color: white; }
+        .status-error { background-color: #9C27B0; color: white; }
+        .json-data {
+            background-color: #1e1e1e;
+            padding: 10px;
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+        .clear-btn {
+            background-color: #607d8b;
+            float: right;
+        }
+        .clear-btn:hover {
+            background-color: #455a64;
+        }
+        .info-box {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #2196F3;
+            margin-bottom: 20px;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        .info-box code {
+            background-color: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 WebSocket Debugger - GA KKM Optimization</h1>
+        
+        <div class="info-box">
+            <h3>📝 Cara Penggunaan:</h3>
+            <ol>
+                <li>Kirim request ke <code>POST /api/optimize</code> terlebih dahulu</li>
+                <li>Copy <code>job_id</code> dari response</li>
+                <li>Paste <code>job_id</code> di field di bawah</li>
+                <li>Klik <strong>Connect WebSocket</strong></li>
+                <li>Tunggu hasil optimasi muncul secara real-time</li>
+            </ol>
+        </div>
+
+        <div class="input-group">
+            <label for="jobId">Job ID:</label>
+            <input type="text" id="jobId" placeholder="Masukkan job_id dari response POST /api/optimize">
+        </div>
+
+        <div class="input-group">
+            <label for="wsUrl">WebSocket URL:</label>
+            <input type="text" id="wsUrl" placeholder="ws://localhost:8000/ws/" readonly 
+                   value="ws://localhost:8000/ws/">
+        </div>
+
+        <div>
+            <button id="connectBtn" onclick="connectWebSocket()">🔌 Connect WebSocket</button>
+            <button id="disconnectBtn" onclick="disconnectWebSocket()" disabled class="disconnect-btn">
+                ❌ Disconnect
+            </button>
+            <button onclick="clearMessages()" class="clear-btn">🗑️ Clear Messages</button>
+        </div>
+
+        <div id="status" class="status-disconnected">
+            ⚫ Disconnected
+        </div>
+
+        <h2>📨 Messages:</h2>
+        <div id="messages"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let messageCount = 0;
+
+        function updateStatus(status, text) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status-${status}`;
+            statusDiv.textContent = text;
+        }
+
+        function addMessage(type, data) {
+            messageCount++;
+            const messagesDiv = document.getElementById('messages');
+            const time = new Date().toLocaleTimeString();
+            
+            let statusClass = '';
+            let statusText = '';
+            
+            if (data.status) {
+                statusClass = `status-${data.status}`;
+                statusText = data.status.toUpperCase();
+            }
+
+            const messageHtml = `
+                <div class="message">
+                    <div>
+                        <span class="message-time">[${time}] Message #${messageCount}</span>
+                        ${statusText ? `<span class="message-status ${statusClass}">${statusText}</span>` : ''}
+                    </div>
+                    <div><strong>${type}:</strong> ${data.message || 'No message'}</div>
+                    ${data.result || data.error ? `
+                        <div class="json-data">
+                            <pre>${JSON.stringify(data.result || data.error, null, 2)}</pre>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            messagesDiv.innerHTML += messageHtml;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function connectWebSocket() {
+            const jobId = document.getElementById('jobId').value.trim();
+            const wsUrl = document.getElementById('wsUrl').value.trim();
+            
+            if (!jobId) {
+                alert('❌ Job ID tidak boleh kosong!');
+                return;
+            }
+
+            const fullUrl = `${wsUrl}${jobId}`;
+            
+            updateStatus('connecting', '🟡 Connecting...');
+            addMessage('INFO', { message: `Connecting to ${fullUrl}` });
+
+            try {
+                ws = new WebSocket(fullUrl);
+
+                ws.onopen = function(event) {
+                    updateStatus('connected', '🟢 Connected');
+                    addMessage('SUCCESS', { message: 'WebSocket connection established!' });
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+                };
+
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    addMessage('RECEIVED', data);
+                    
+                    // Update status based on message
+                    if (data.status === 'completed') {
+                        updateStatus('connected', '🟢 Connected - Optimization Completed!');
+                    } else if (data.status === 'failed' || data.status === 'error') {
+                        updateStatus('connected', '🟢 Connected - Error Occurred');
+                    }
+                };
+
+                ws.onerror = function(error) {
+                    addMessage('ERROR', { 
+                        message: 'WebSocket error occurred!',
+                        error: error.toString()
+                    });
+                    updateStatus('disconnected', '🔴 Error - Check console');
+                    console.error('WebSocket Error:', error);
+                };
+
+                ws.onclose = function(event) {
+                    addMessage('INFO', { 
+                        message: `Connection closed. Code: ${event.code}, Reason: ${event.reason || 'No reason'}` 
+                    });
+                    updateStatus('disconnected', '⚫ Disconnected');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                    ws = null;
+                };
+
+            } catch (error) {
+                addMessage('ERROR', { 
+                    message: 'Failed to create WebSocket connection',
+                    error: error.toString()
+                });
+                updateStatus('disconnected', '🔴 Connection Failed');
+                console.error('Connection Error:', error);
+            }
+        }
+
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                addMessage('INFO', { message: 'Manual disconnect requested' });
+            }
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+            messageCount = 0;
+        }
+
+        // Auto-focus on job_id input
+        document.getElementById('jobId').focus();
+        
+        // Allow Enter key to connect
+        document.getElementById('jobId').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                connectWebSocket();
+            }
+        });
+    </script>
+</body>
+</html>
