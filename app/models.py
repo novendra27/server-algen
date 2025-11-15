@@ -19,12 +19,12 @@ class GAParameters(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "popsize": 50,
-                "generation": 100,
-                "cr": 0.6,
-                "mr": 0.4,
+                "popsize": 2,
+                "generation": 1,
+                "cr": 0.5,
+                "mr": 0.5,
                 "kriteria_penghentian": 0.95,
-                "jumlah_kelompok": 10
+                "jumlah_kelompok": 190
             }
         }
 
@@ -79,54 +79,34 @@ class MahasiswaData(BaseModel):
 class OptimizationRequest(BaseModel):
     """Model untuk request optimization"""
     parameters: GAParameters
-    data: List[MahasiswaData]
-
-    @field_validator('data')
-    @classmethod
-    def validate_data(cls, v: List[MahasiswaData]) -> List[MahasiswaData]:
-        """Validasi data mahasiswa"""
-        if len(v) == 0:
-            raise ValueError("Data mahasiswa tidak boleh kosong")
-        
-        # Check duplicate IDs
-        ids = [mahasiswa.ID for mahasiswa in v]
-        if len(ids) != len(set(ids)):
-            duplicates = [id for id in ids if ids.count(id) > 1]
-            raise ValueError(f"Ditemukan ID duplikat: {list(set(duplicates))}")
-        
-        return v
 
     class Config:
         json_schema_extra = {
             "example": {
                 "parameters": {
-                    "popsize": 50,
-                    "generation": 100,
-                    "cr": 0.6,
-                    "mr": 0.4,
+                    "popsize": 2,
+                    "generation": 1,
+                    "cr": 0.5,
+                    "mr": 0.5,
                     "kriteria_penghentian": 0.95,
-                    "jumlah_kelompok": 10
-                },
-                "data": [
-                    {"ID": 1, "Jenis_Kelamin": "LK", "Jurusan": "Teknik Informatika", "HTQ": "Ya"},
-                    {"ID": 2, "Jenis_Kelamin": "PR", "Jurusan": "Sistem Informasi", "HTQ": "Tidak"}
-                ]
+                    "jumlah_kelompok": 190
+                }
             }
         }
 
 
 class OptimizationResponse(BaseModel):
     """Model untuk response optimization"""
-    job_id: str
+    id_optimasi: int
     status: str
     message: str
 
     class Config:
         json_schema_extra = {
             "example": {
-                "job_id": "550e8400-e29b-41d4-a716-446655440000",
-                "status": "queued",
-                "message": "Job optimization berhasil dibuat. Gunakan WebSocket dengan job_id ini untuk menerima hasil."
+                "id_optimasi": 1,
+                "status": "success",
+                "message": "Optimasi berhasil dijalankan"
             }
         }
 
@@ -162,11 +142,3 @@ class OptimizationResult(BaseModel):
     kelompok_list: List[List[int]] = Field(..., description="List of kelompok berisi ID mahasiswa")
     statistics: OptimizationStatistics
     kelompok_details: List[KelompokDetail]
-
-
-class WebSocketMessage(BaseModel):
-    """Model untuk WebSocket message"""
-    status: str
-    message: Optional[str] = None
-    result: Optional[OptimizationResult] = None
-    error: Optional[str] = None
