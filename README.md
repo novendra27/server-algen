@@ -2,26 +2,32 @@
 
 REST API untuk optimasi penentuan kelompok Kuliah Kerja Mahasiswa (KKM) menggunakan Algoritma Genetika dengan integrasi database MySQL.
 
+## 🌐 Aplikasi Web
+
+Frontend web untuk API ini tersedia di: **[web-algen](https://github.com/novendra27/web-algen)**
+
 ## 🚀 Fitur
 
-- ✅ Integrasi database MySQL
+- ✅ Integrasi database MySQL dengan SQLAlchemy ORM
 - ✅ REST API dengan FastAPI
 - ✅ Background processing untuk algoritma genetika
-- ✅ Tracking status optimasi
+- ✅ Automatic database table creation
 - ✅ Penyimpanan hasil ke database
+- ✅ CORS middleware untuk integrasi frontend
 
 ## 📋 Prerequisites
 
 - Python 3.8+
 - MySQL Server (via XAMPP atau standalone)
-- Virtual Environment
+- Virtual Environment (recommended)
 
 ## 🛠️ Instalasi
 
-### 1. Clone atau Download Project
+### 1. Clone Repository
 
 ```bash
-cd "d:\Code Learning\Python Project\api-algen-kkm"
+git clone https://github.com/novendra27/api-algen-kkm.git
+cd api-algen-kkm
 ```
 
 ### 2. Buat Virtual Environment
@@ -38,6 +44,9 @@ python -m venv .venv
 
 # Windows CMD
 .venv\Scripts\activate.bat
+
+# Linux/Mac
+source .venv/bin/activate
 ```
 
 ### 4. Install Dependencies
@@ -48,16 +57,22 @@ pip install -r requirements.txt
 
 ### 5. Setup Database
 
-1. Jalankan XAMPP dan aktifkan MySQL
-2. Akses phpMyAdmin: http://localhost:8090/phpmyadmin
-3. Buat database `algen_kkm`
-4. Import/jalankan SQL schema dari `konteks/database.md`
+1. Jalankan MySQL Server (via XAMPP atau standalone)
+2. Buat database `algen_kkm`:
+   ```sql
+   CREATE DATABASE algen_kkm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
+3. Tabel akan dibuat otomatis saat aplikasi pertama kali dijalankan
 
 ### 6. Konfigurasi Environment
 
 Copy file `.env.example` ke `.env`:
 
 ```bash
+# Windows
+copy .env.example .env
+
+# Linux/Mac
 cp .env.example .env
 ```
 
@@ -76,13 +91,17 @@ DEBUG=True
 python main.py
 ```
 
-atau
+atau dengan uvicorn directly:
 
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Server akan berjalan di: http://localhost:8000
+Server akan berjalan di: **http://localhost:8000**
+
+Dokumentasi API otomatis tersedia di:
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
 
 ## 📚 API Endpoints
 
@@ -90,43 +109,27 @@ Server akan berjalan di: http://localhost:8000
 
 **GET** `/`
 
-Response:
+Menampilkan informasi basic API dan daftar endpoint yang tersedia.
+
+**Response:**
 ```json
 {
   "message": "GA KKM Optimization API",
   "version": "1.0.0",
   "endpoints": {
     "optimize": "POST /api/optimize",
-    "health": "GET /health",
-    "data": "GET /api/data"
+    "health": "GET /health"
   }
 }
 ```
 
-### 2. Get All Data Mahasiswa
-
-**GET** `/api/data`
-
-Response:
-```json
-{
-  "total": 100,
-  "data": [
-    {
-      "ID": 1,
-      "Jenis_Kelamin": "LK",
-      "Jurusan": "Teknik Informatika",
-      "HTQ": "Ya"
-    }
-  ]
-}
-```
-
-### 3. Create Optimization Job
+### 2. Create Optimization Job
 
 **POST** `/api/optimize`
 
-Request Body:
+Membuat job optimasi baru. Data mahasiswa diambil otomatis dari database.
+
+**Request Body:**
 ```json
 {
   "parameters": {
@@ -136,156 +139,195 @@ Request Body:
     "mr": 0.4,
     "kriteria_penghentian": 0.95,
     "jumlah_kelompok": 10
-  },
-  "data": []
+  }
 }
 ```
 
-> **Note:** Jika `data` kosong, akan mengambil semua data dari database
+**Parameter Details:**
+- `popsize`: Ukuran populasi (integer, > 0)
+- `generation`: Jumlah generasi maksimal (integer, > 0)
+- `cr`: Crossover rate (float, 0.0-1.0)
+- `mr`: Mutation rate (float, 0.0-1.0)
+- `kriteria_penghentian`: Target fitness untuk penghentian (float, 0.0-1.0)
+- `jumlah_kelompok`: Jumlah kelompok yang diinginkan (integer, > 0)
 
-Response:
+**Response:**
 ```json
 {
-  "job_id": "123",
-  "status": "pending",
-  "message": "Job optimization berhasil dibuat"
+  "id_optimasi": 123,
+  "status": "success",
+  "message": "Optimasi berhasil dijalankan"
 }
 ```
 
-### 4. Check Optimization Status
+> **Note:** Algoritma genetika berjalan di background. Gunakan `id_optimasi` untuk tracking hasil melalui database atau frontend.
 
-**GET** `/api/optimize/{optimasi_id}/status`
-
-Response:
-```json
-{
-  "optimasi_id": 123,
-  "status": "completed",
-  "parameters": {
-    "popsize": 50,
-    "generation": 100,
-    "cr": 0.6,
-    "mr": 0.4,
-    "kriteria_penghentian": 0.95,
-    "jumlah_kelompok": 10
-  },
-  "created_at": "2025-11-14T10:00:00",
-  "updated_at": "2025-11-14T10:05:00"
-}
-```
-
-### 5. Get Optimization Result
-
-**GET** `/api/optimize/{optimasi_id}/result`
-
-Response:
-```json
-{
-  "optimasi_id": 123,
-  "status": "completed",
-  "jumlah_kelompok": 10,
-  "kelompok_list": [
-    [1, 5, 12, 18, 25],
-    [2, 7, 14, 20, 27],
-    ...
-  ],
-  "created_at": "2025-11-14T10:00:00",
-  "completed_at": "2025-11-14T10:05:00"
-}
-```
-
-### 6. Health Check
+### 3. Health Check
 
 **GET** `/health`
 
-Response:
+Mengecek status kesehatan API dan koneksi database.
+
+**Response:**
 ```json
 {
   "status": "healthy",
   "database": "connected",
-  "pending_jobs": 0,
-  "processing_jobs": 1
+  "total_mahasiswa": 150,
+  "total_optimasi": 25
 }
 ```
 
 ## 🗄️ Database Schema
 
 ### Tabel `data`
-- `id`: ID mahasiswa (Primary Key)
-- `jenis_kelamin`: ENUM('LK', 'PR')
-- `jurusan`: VARCHAR(100)
-- `htq`: ENUM('Ya', 'Tidak')
-- `created_at`, `updated_at`: Timestamps
+Menyimpan data mahasiswa.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | BIGINT | Primary Key, Auto Increment |
+| `jenis_kelamin` | ENUM('LK', 'PR') | Jenis kelamin mahasiswa |
+| `jurusan` | VARCHAR(100) | Nama jurusan |
+| `htq` | ENUM('Ya', 'Tidak') | Status HTQ (Hafalan Tahfidz Quran) |
+| `created_at` | DATETIME | Timestamp pembuatan |
+| `updated_at` | DATETIME | Timestamp update terakhir |
 
 ### Tabel `optimasi`
-- `id`: ID optimasi (Primary Key)
-- `status`: ENUM('pending', 'processing', 'completed', 'failed')
-- `popsize`, `generation`, `cr`, `mr`, `kriteria_penghentian`, `jumlah_kelompok`: Parameter GA
-- `created_at`, `updated_at`: Timestamps
+Menyimpan parameter dan status setiap job optimasi.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | BIGINT | Primary Key, Auto Increment |
+| `status` | ENUM | Status: 'pending', 'processing', 'completed', 'failed' |
+| `popsize` | INTEGER | Ukuran populasi GA |
+| `generation` | INTEGER | Jumlah generasi maksimal |
+| `cr` | DECIMAL(5,4) | Crossover rate |
+| `mr` | DECIMAL(5,4) | Mutation rate |
+| `kriteria_penghentian` | DECIMAL(5,4) | Target fitness |
+| `jumlah_kelompok` | INTEGER | Jumlah kelompok yang diinginkan |
+| `fitness_terbaik` | DECIMAL(10,6) | Fitness terbaik yang dicapai |
+| `waktu_eksekusi` | INTEGER | Waktu eksekusi (detik) |
+| `created_at` | DATETIME | Timestamp pembuatan |
+| `updated_at` | DATETIME | Timestamp update terakhir |
 
 ### Tabel `kelompoks`
-- `id`: Primary Key
-- `id_optimasi`: Foreign Key ke `optimasi`
-- `id_data`: Foreign Key ke `data`
-- `kelompok`: Nomor kelompok (1, 2, 3, ...)
-- `created_at`, `updated_at`: Timestamps
+Menyimpan hasil pengelompokan mahasiswa.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | BIGINT | Primary Key, Auto Increment |
+| `id_optimasi` | BIGINT | Foreign Key -> optimasi.id |
+| `id_data` | BIGINT | Foreign Key -> data.id |
+| `kelompok` | INTEGER | Nomor kelompok (1, 2, 3, ...) |
+| `created_at` | DATETIME | Timestamp pembuatan |
+| `updated_at` | DATETIME | Timestamp update terakhir |
 
 ## 🔧 Struktur Project
 
 ```
 api-algen-kkm/
-├── .env                    # Konfigurasi environment (jangan commit)
-├── .env.example            # Template environment
-├── .gitignore              # Git ignore file
-├── database.py             # Database configuration
-├── db_models.py            # SQLAlchemy ORM models
-├── ga_engine.py            # Algoritma Genetika engine
-├── main.py                 # FastAPI application
-├── models.py               # Pydantic models
-├── requirements.txt        # Python dependencies
+├── main.py                     # Entry point aplikasi
+├── requirements.txt            # Python dependencies
+├── .env                        # Environment variables (dibuat manual)
+├── .env.example                # Template environment variables
+├── .gitignore                  # Git ignore file
+├── README.md                   # Dokumentasi project
+├── app/
+│   ├── __init__.py            # App package
+│   ├── main.py                # FastAPI application & routes
+│   ├── models.py              # Pydantic models (request/response)
+│   └── ga_engine.py           # Algoritma Genetika engine
+├── database/
+│   ├── __init__.py            # Database package
+│   ├── database.py            # Database connection & session
+│   └── models.py              # SQLAlchemy ORM models
 └── konteks/
-    ├── algen.ipynb        # Jupyter notebook
-    ├── api_context_md.md  # API context
-    └── database.md        # Database schema
+    ├── algen.ipynb            # Jupyter notebook (development)
+    ├── api_context.md         # API context documentation
+    ├── database.md            # Database schema documentation
+    └── perubahan_implementasi.md  # Implementation notes
 ```
 
 ## 📝 Workflow
 
-1. Client mengirim request ke `/api/optimize` dengan parameter GA
-2. Server membuat record di tabel `optimasi` dengan status `pending`
-3. Background task menjalankan algoritma genetika
-4. Status di-update ke `processing` saat GA berjalan
-5. Hasil disimpan ke tabel `kelompoks`
-6. Status di-update ke `completed`
-7. Client bisa cek status via `/api/optimize/{id}/status`
-8. Client bisa ambil hasil via `/api/optimize/{id}/result`
+1. **Input Data**: Data mahasiswa disimpan di tabel `data` (via SQL insert atau aplikasi web)
+2. **Request Optimasi**: Client mengirim request `POST /api/optimize` dengan parameter GA
+3. **Create Job**: Server membuat record di tabel `optimasi` dengan status `pending`
+4. **Background Processing**: Background task menjalankan algoritma genetika
+   - Status di-update ke `processing`
+   - GA iterasi hingga kriteria terpenuhi
+5. **Save Results**: Hasil pengelompokan disimpan ke tabel `kelompoks`
+6. **Complete**: Status di-update ke `completed` dengan fitness dan waktu eksekusi
+7. **Retrieve Results**: Client mengambil hasil melalui query database atau aplikasi web
+
+## 🧬 Algoritma Genetika
+
+### Constraint yang Dioptimasi
+
+1. **C1 - HTQ**: Minimal 1 anggota HTQ di setiap kelompok
+2. **C2 - Heterogenitas Jurusan**: Jumlah jurusan berbeda > 50% ukuran kelompok
+3. **C3 - Proporsi Gender**: Proporsi gender menyimpang ±10% dari proporsi ideal
+4. **C4 - Ukuran Kelompok**: Ukuran kelompok sesuai expected size
+
+### Operator Genetika
+
+- **Encoding**: Permutation encoding (ID mahasiswa)
+- **Crossover**: Partially Mapped Crossover (PMX)
+- **Mutation**: Reciprocal Exchange Mutation
+- **Selection**: Elitism replacement strategy
+
+### Kriteria Penghentian
+
+- Mencapai target fitness (`kriteria_penghentian`)
+- Mencapai jumlah generasi maksimal
 
 ## 🐛 Troubleshooting
 
 ### Database Connection Error
 
+```
+sqlalchemy.exc.OperationalError: (pymysql.err.OperationalError) (2003, "Can't connect to MySQL server...")
+```
+
+**Solusi:**
 1. Pastikan MySQL server berjalan
 2. Cek kredensial di file `.env`
 3. Pastikan database `algen_kkm` sudah dibuat
+4. Test koneksi: `mysql -u root -p -h localhost`
 
 ### Import Error
 
+```
+ModuleNotFoundError: No module named 'fastapi'
+```
+
+**Solusi:**
 ```bash
+# Pastikan virtual environment aktif
 pip install -r requirements.txt --upgrade
 ```
 
 ### Port Already in Use
 
-Ubah port di `.env` atau jalankan dengan port berbeda:
-
-```bash
-uvicorn main:app --reload --port 8001
+```
+ERROR: [Errno 10048] Only one usage of each socket address is normally permitted
 ```
 
-## 📄 License
+**Solusi:**
+```bash
+# Gunakan port berbeda
+uvicorn app.main:app --reload --port 8001
+```
 
-MIT License
+### Timezone Warning
 
-## 👥 Author
+```
+Warning: Naive datetime used
+```
 
-Novendra27
+**Solusi:** Project sudah menggunakan `zoneinfo` untuk Asia/Jakarta timezone. Pastikan Python 3.9+ atau install `backports.zoneinfo`
+
+## 🔗 Links
+
+- **Web Application**: [web-algen](https://github.com/novendra27/web-algen)
+- **API Documentation**: http://localhost:8000/docs (saat server berjalan)
